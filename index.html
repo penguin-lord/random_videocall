@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat & Video Call</title>
+    <script defer src="script.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #chat-container, #video-container {
+            width: 80%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+        #chat-messages {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #fff;
+        }
+        #message-input {
+            display: flex;
+        }
+        #message-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        #message-input button {
+            padding: 10px;
+            border: none;
+            background: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        #video-container video {
+            width: 100%;
+            background: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat & Video Call</h1>
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <div id="message-input">
+            <input type="text" id="message" placeholder="Type a message...">
+            <button id="send">Send</button>
+        </div>
+    </div>
+
+    <div id="video-container">
+        <video id="local-video" autoplay muted></video>
+        <video id="remote-video" autoplay></video>
+        <button id="start-call">Start Call</button>
+    </div>
+
+    <script>
+        // Chat functionality
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message');
+        const sendButton = document.getElementById('send');
+
+        sendButton.addEventListener('click', () => {
+            const message = messageInput.value;
+            if (message) {
+                const messageElement = document.createElement('div');
+                messageElement.textContent = `You: ${message}`;
+                chatMessages.appendChild(messageElement);
+                messageInput.value = '';
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+
+        // Video call functionality
+        const localVideo = document.getElementById('local-video');
+        const remoteVideo = document.getElementById('remote-video');
+        const startCallButton = document.getElementById('start-call');
+
+        let localStream;
+        let peerConnection;
+        const config = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        };
+
+        startCallButton.addEventListener('click', async () => {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localVideo.srcObject = localStream;
+
+            peerConnection = new RTCPeerConnection(config);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.ontrack = event => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    // Exchange ICE candidates with the remote peer
+                    console.log('Send this ICE candidate to remote:', event.candidate);
+                }
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            // Send the offer to the remote peer
+            console.log('Send this offer to remote peer:', offer);
+        });
+
+        // For the remote peer, you would need to handle receiving the offer, creating an answer,
+        // exchanging ICE candidates, and setting the remote description.
+    </script>
+</body>
+</html>
